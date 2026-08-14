@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusVoice AI - Smart Complaint & Grievance Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#eef2ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-md">
+                    <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 tracking-tight">CampusVoice <span class="text-indigo-600 text-xs px-2 py-0.5 bg-indigo-50 border border-indigo-200 rounded-full uppercase">AI-Routing Active</span></h1>
+                </div>
+            </div>
+            <nav class="flex space-x-1 sm:space-x-2">
+                <button onclick="switchTab('submit')" id="tab-submit" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-all bg-indigo-50 text-indigo-700">Submit Grievance</button>
+                <button onclick="switchTab('admin')" id="tab-admin" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-all text-slate-600 hover:bg-slate-100">Admin Dashboard & Analytics</button>
+                <button onclick="switchTab('public')" id="tab-public" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-all text-slate-600 hover:bg-slate-100">Public Transparency Log</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+
+        <!-- TAB 1: SUBMIT COMPLAINT -->
+        <section id="view-submit" class="view-section grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold text-slate-900">File a Student Grievance</h2>
+                    <p class="text-sm text-slate-500 mt-1">Our NLP engine will instantly analyze your description, assess its urgency, and route it to the proper department.</p>
+                </div>
+                <form id="complaintForm" onsubmit="handleComplaintSubmit(event)" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Student ID or Name (Optional / Anonymous)</label>
+                        <input type="text" id="studentName" placeholder="e.g. STU-2026-4892 or Anonymous" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Grievance Category (Optional Override)</label>
+                        <select id="manualCategory" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm bg-white">
+                            <option value="auto">✨ Let AI Auto-Classify</option>
+                            <option value="Hostel & Accommodation">Hostel & Accommodation</option>
+                            <option value="IT & Wi-Fi Infrastructure">IT & Wi-Fi Infrastructure</option>
+                            <option value="Academics & Examination">Academics & Examination</option>
+                            <option value="Campus Facilities & Maintenance">Campus Facilities & Maintenance</option>
+                            <option value="Financial & Fees">Financial & Fees</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Describe your issue in detail</label>
+                        <textarea id="complaintText" rows="5" required placeholder="Type your issue here... (e.g., Wi-Fi is completely down in Block C residential dorms for the past 3 days during mid-terms!)" oninput="simulateNLPPreview(this.value)" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"></textarea>
+                    </div>
+
+                    <!-- Live NLP Preview Card -->
+                    <div id="nlpPreviewBox" class="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4 hidden">
+                        <div class="flex items-center space-x-2 text-indigo-900 font-semibold text-xs uppercase tracking-wider mb-2">
+                            <i data-lucide="cpu" class="w-4 h-4 text-indigo-600"></i>
+                            <span>Live NLP Real-Time Analysis Preview</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                            <div class="bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs">
+                                <span class="text-slate-400 block mb-0.5">Predicted Dept</span>
+                                <span id="previewDept" class="font-bold text-slate-800">Waiting for text...</span>
+                            </div>
+                            <div class="bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs">
+                                <span class="text-slate-400 block mb-0.5">Urgency Flag</span>
+                                <span id="previewUrgency" class="font-bold text-slate-800">-</span>
+                            </div>
+                            <div class="bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs col-span-2 sm:col-span-1">
+                                <span class="text-slate-400 block mb-0.5">Sentiment Score</span>
+                                <span id="previewSentiment" class="font-bold text-slate-800">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition-all shadow-md shadow-indigo-200 flex items-center justify-center space-x-2">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        <span>Submit Secure Grievance Ticket</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Sidebar Context -->
+            <div class="space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="font-bold text-slate-900 mb-3 flex items-center space-x-2">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-indigo-600"></i>
+                        <span>How AI Routing Works</span>
+                    </h3>
+                    <ul class="space-y-3 text-sm text-slate-600">
+                        <li class="flex items-start space-x-2">
+                            <span class="bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded text-xs mt-0.5">1</span>
+                            <span><strong>Text Vectorization:</strong> NLP models extract semantic keywords (e.g., "router", "water", "exam").</span>
+                        </li>
+                        <li class="flex items-start space-x-2">
+                            <span class="bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded text-xs mt-0.5">2</span>
+                            <span><strong>Urgency Evaluation:</strong> High-stress vocabulary and repetition automatically trigger <span class="text-red-600 font-semibold">High Priority</span> flags.</span>
+                        </li>
+                        <li class="flex items-start space-x-2">
+                            <span class="bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded text-xs mt-0.5">3</span>
+                            <span><strong>Automated Dispatch:</strong> Direct routing to specialized departmental heads with real-time alerting.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Recent Live Counter Badge -->
+                <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl p-6 shadow-xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs uppercase tracking-wider text-indigo-300 font-semibold">System Statistics</span>
+                        <span class="flex h-2 w-2 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                    </div>
+                    <div class="text-3xl font-black mb-1" id="totalCountDisplay">248</div>
+                    <p class="text-xs text-slate-300">Total complaints processed this semester with a 94.2% resolution rating.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: ADMIN DASHBOARD & ROUTING -->
+        <section id="view-admin" class="view-section hidden space-y-6">
+            
+            <!-- Red Alert Banner Area (Dynamic) -->
+            <div id="redAlertBanner" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-xl shadow-xs flex items-start justify-between">
+                <div class="flex items-start space-x-3">
+                    <div class="bg-red-500 text-white p-2 rounded-lg animate-bounce">
+                        <i data-lucide="alert-octagon" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-red-900 text-base">🚨 CRITICAL RED ALERT: High Grievance Volume Spike Detected!</h4>
+                        <p id="redAlertMessage" class="text-sm text-red-700 mt-0.5">Multiple urgent complaints recorded for "IT & Wi-Fi Infrastructure" within the last 2 hours. Automatic escalation sent to the Dean of Operations.</p>
+                    </div>
+                </div>
+                <button onclick="dismissAlert()" class="text-red-400 hover:text-red-600 text-sm font-bold">Dismiss</button>
+            </div>
+
+            <!-- Analytics Overview Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between text-slate-500 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Active Queue</span>
+                        <i data-lucide="inbox" class="w-5 h-5 text-indigo-600"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-900" id="statActive">14</div>
+                    <span class="text-xs text-amber-600 font-medium">Requires immediate routing</span>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between text-slate-500 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">High Urgency Ratio</span>
+                        <i data-lucide="flame" class="w-5 h-5 text-red-500"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-900" id="statHighCount">4</div>
+                    <span class="text-xs text-red-600 font-medium">Flagged by NLP engine</span>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between text-slate-500 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Most Frequent Issue</span>
+                        <i data-lucide="bar-chart-2" class="w-5 h-5 text-blue-600"></i>
+                    </div>
+                    <div class="text-lg font-bold text-slate-900 truncate" id="statTopIssue">Wi-Fi Connectivity</div>
+                    <span class="text-xs text-slate-500">42 total submissions</span>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between text-slate-500 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Avg Resolution Time</span>
+                        <i data-lucide="clock" class="w-5 h-5 text-emerald-600"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-900">4.2 hrs</div>
+                    <span class="text-xs text-emerald-600 font-medium">18% faster than target SLA</span>
+                </div>
+            </div>
+
+            <!-- Two Column Layout: Live Ticket Table & Frequency Breakdown -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Live Routing Queue (2 Cols) -->
+                <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                    <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-slate-900">Live Complaint Routing Queue</h3>
+                            <p class="text-xs text-slate-500">Real-time incoming tickets classified and routed by AI.</p>
+                        </div>
+                        <span class="bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1 rounded-full border border-indigo-100" id="liveQueueCount">14 Active Tickets</span>
+                    </div>
+                    <div class="overflow-x-auto flex-grow">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-400 uppercase text-xs tracking-wider border-b border-slate-100">
+                                    <th class="py-3 px-4 font-semibold">ID / Student</th>
+                                    <th class="py-3 px-4 font-semibold">Complaint Summary</th>
+                                    <th class="py-3 px-4 font-semibold">AI Routing Dept</th>
+                                    <th class="py-3 px-4 font-semibold">Urgency</th>
+                                    <th class="py-3 px-4 font-semibold text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminQueueTableBody" class="divide-y divide-slate-100">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Frequency & Red Alert Metrics (1 Col) -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <h3 class="font-bold text-slate-900 mb-1 flex items-center justify-between">
+                            <span>Most Frequent Complaints</span>
+                            <i data-lucide="trending-up" class="w-4 h-4 text-indigo-600"></i>
+                        </h3>
+                        <p class="text-xs text-slate-500 mb-4">Aggregated category frequencies this month.</p>
+                        <div id="frequencyList" class="space-y-4">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Department Workload Load Balancer -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <h3 class="font-bold text-slate-900 mb-3">Department Workload Load</h3>
+                        <div class="space-y-3 text-xs" id="departmentLoadBars">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 3: PUBLIC TRANSPARENCY LOG (TRUST BUILDING) -->
+        <section id="view-public" class="view-section hidden space-y-6">
+            <div class="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-3xl p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-center">
+                <div class="max-w-xl space-y-2">
+                    <span class="bg-indigo-500/30 text-indigo-200 text-xs font-semibold px-3 py-1 rounded-full border border-indigo-400/30 uppercase tracking-wider">Institutional Accountability</span>
+                    <h2 class="text-2xl sm:text-3xl font-black">Public Trust & Resolution Ledger</h2>
+                    <p class="text-slate-300 text-sm">Transparency builds trust. Here you can review verified solved complaints, institutional action reports, and closure times across all campus divisions.</p>
+                </div>
+                <div class="mt-6 md:mt-0 bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl text-center min-w-[200px]">
+                    <div class="text-3xl font-black text-emerald-400" id="publicSolvedCount">1,420+</div>
+                    <span class="text-xs text-slate-300 uppercase tracking-wider">Total Issues Resolved</span>
+                </div>
+            </div>
+
+            <!-- Search Filter Bar -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="relative w-full sm:w-96">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                    <input type="text" id="publicSearchInput" oninput="filterPublicLog(this.value)" placeholder="Search solved complaints (e.g. Hostel, Wi-Fi, Library)..." class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex items-center space-x-2 text-xs font-medium text-slate-500 w-full sm:w-auto justify-end">
+                    <span>Filter Department:</span>
+                    <select id="publicDeptFilter" onchange="filterPublicLog(document.getElementById('publicSearchInput').value)" class="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none">
+                        <option value="all">All Departments</option>
+                        <option value="Hostel & Accommodation">Hostel & Accommodation</option>
+                        <option value="IT & Wi-Fi Infrastructure">IT & Wi-Fi Infrastructure</option>
+                        <option value="Academics & Examination">Academics & Examination</option>
+                        <option value="Campus Facilities & Maintenance">Campus Facilities & Maintenance</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Solved Feed -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="publicSolvedGrid">
+                <!-- Populated dynamically -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <p>&copy; 2026 CampusVoice AI Systems. Built for absolute transparency and student satisfaction.</p>
+    </footer>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl transform translate-y-32 transition-transform duration-300 flex items-center space-x-3 z-50 text-sm">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
+        <span id="toastMessage">Action completed successfully.</span>
+    </div>
+
+    <!-- Application Script Logic -->
+    <script>
+        // Reactive State Management
+        let state = {
+            complaints: [
+                { id: "CMP-8921", student: "STU-4091", text: "Wi-Fi routers completely offline in residential Block C fourth floor.", category: "IT & Wi-Fi Infrastructure", urgency: "High", sentiment: "Negative", status: "Active", date: "10 mins ago" },
+                { id: "CMP-8920", student: "STU-1120", text: "Leaking water pipe near corridor in East Wing hostel block.", category: "Campus Facilities & Maintenance", urgency: "High", sentiment: "Negative", status: "Active", date: "25 mins ago" },
+                { id: "CMP-8919", student: "Anonymous", text: "Mid-term exam schedule overlaps for CS and ECE dual majors.", category: "Academics & Examination", urgency: "Medium", sentiment: "Neutral", status: "Active", date: "1 hour ago" },
+                { id: "CMP-8918", student: "STU-3321", text: "Cafeteria food pricing mismatch listed on digital menu board.", category: "Financial & Fees", urgency: "Low", sentiment: "Neutral", status: "Active", date: "2 hours ago" },
+                { id: "CMP-8917", student: "STU-9982", text: "Common room washing machine broken down since weekend.", category: "Hostel & Accommodation", urgency: "Medium", sentiment: "Negative", status: "Active", date: "3 hours ago" }
+            ],
+            solved: [
+                { id: "CMP-8890", text: "Main library AC unit blowing hot air on floor 3.", category: "Campus Facilities & Maintenance", resolvedBy: "Facilities HVAC Unit #4", resolutionNote: "Compressor valve replaced and tested successfully.", date: "Yesterday", rating: "5/5" },
+                { id: "CMP-8885", text: "Portal login timeout error when submitting scholarship forms.", category: "IT & Wi-Fi Infrastructure", resolvedBy: "Campus IT Systems", resolutionNote: "OAuth gateway timeout limit extended from 30s to 90s.", date: "2 days ago", rating: "4.8/5" },
+                { id: "CMP-8879", text: "Hostel gate curfew biometric scanner unresponsive.", category: "Hostel & Accommodation", resolvedBy: "Security & Hostel Ops", resolutionNote: "Firmware flashed and biometric sensor recalibrated.", date: "3 days ago", rating: "5/5" },
+                { id: "CMP-8870", text: "Grade discrepancy recorded in Advanced Calculus portal.", category: "Academics & Examination", resolvedBy: "Registrar Office", resolutionNote: "Manual professor audit verified and corrected score entry.", date: "4 days ago", rating: "4.9/5" }
+            ],
+            frequencies: {
+                "IT & Wi-Fi Infrastructure": 42,
+                "Hostel & Accommodation": 38,
+                "Campus Facilities & Maintenance": 29,
+                "Academics & Examination": 19,
+                "Financial & Fees": 12
+            }
+        };
+
+        // Initialize Lucide icons
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            renderAll();
+        });
+
+        // Tab Navigation Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-indigo-50', 'text-indigo-700');
+                el.classList.add('text-slate-600', 'hover:bg-slate-100');
+            });
+
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            activeBtn.classList.remove('text-slate-600', 'hover:bg-slate-100');
+            activeBtn.classList.add('bg-indigo-50', 'text-indigo-700');
+            lucide.createIcons();
+        }
+
+        // Live NLP Preview Simulator as user types
+        function simulateNLPPreview(text) {
+            const previewBox = document.getElementById('nlpPreviewBox');
+            if (!text || text.trim().length < 5) {
+                previewBox.classList.add('hidden');
+                return;
+            }
+            previewBox.classList.remove('hidden');
+
+            const lower = text.toLowerCase();
+            let dept = "Campus Facilities & Maintenance";
+            let urgency = "Low";
+            let sentiment = "Neutral (-0.2)";
+
+            if (lower.includes('wifi') || lower.includes('internet') || lower.includes('router') || lower.includes('portal') || lower.includes('login')) {
+                dept = "IT & Wi-Fi Infrastructure";
+            } else if (lower.includes('hostel') || lower.includes('room') || lower.includes('dorm') || lower.includes('bed') || lower.includes('mess')) {
+                dept = "Hostel & Accommodation";
+            } else if (lower.includes('exam') || lower.includes('grade') || lower.includes('professor') || lower.includes('course') || lower.includes('syllabus')) {
+                dept = "Academics & Examination";
+            } else if (lower.includes('fee') || lower.includes('scholarship') || lower.includes('payment') || lower.includes('dues')) {
+                dept = "Financial & Fees";
+            }
+
+            if (lower.includes('urgent') || lower.includes('immediately') || lower.includes('completely') || lower.includes('down') || lower.includes('emergency') || lower.includes('hazard')) {
+                urgency = "High";
+                sentiment = "Highly Negative (-0.8)";
+            } else if (lower.includes('broken') || lower.includes('issue') || lower.includes('error') || lower.includes('bad')) {
+                urgency = "Medium";
+                sentiment = "Negative (-0.5)";
+            }
+
+            document.getElementById('previewDept').innerText = dept;
+            
+            const urgEl = document.getElementById('previewUrgency');
+            urgEl.innerText = urgency;
+            urgEl.className = `font-bold ${urgency === 'High' ? 'text-red-600 animate-pulse' : urgency === 'Medium' ? 'text-amber-600' : 'text-emerald-600'}`;
+            
+            document.getElementById('previewSentiment').innerText = sentiment;
+        }
+
+        // Handle Form Submission
+        function handleComplaintSubmit(e) {
+            e.preventDefault();
+            const text = document.getElementById('complaintText').value;
+            const student = document.getElementById('studentName').value || 'Anonymous';
+            const manualCat = document.getElementById('manualCategory').value;
+
+            // Run NLP classification logic
+            const lower = text.toLowerCase();
+            let dept = manualCat !== 'auto' ? manualCat : "Campus Facilities & Maintenance";
+            if (manualCat === 'auto') {
+                if (lower.includes('wifi') || lower.includes('internet') || lower.includes('router') || lower.includes('portal')) dept = "IT & Wi-Fi Infrastructure";
+                else if (lower.includes('hostel') || lower.includes('room') || lower.includes('dorm')) dept = "Hostel & Accommodation";
+                else if (lower.includes('exam') || lower.includes('grade') || lower.includes('class')) dept = "Academics & Examination";
+                else if (lower.includes('fee') || lower.includes('payment')) dept = "Financial & Fees";
+            }
+
+            let urgency = "Low";
+            if (lower.includes('urgent') || lower.includes('completely') || lower.includes('down') || lower.includes('emergency') || lower.includes('hazard')) {
+                urgency = "High";
+            } else if (lower.includes('broken') || lower.includes('issue') || lower.includes('error')) {
+                urgency = "Medium";
+            }
+
+            const newId = `CMP-${Math.floor(1000 + Math.random() * 9000)}`;
+            const newEntry = {
+                id: newId,
+                student: student,
+                text: text,
+                category: dept,
+                urgency: urgency,
+                sentiment: urgency === 'High' ? 'Negative' : 'Neutral',
+                status: 'Active',
+                date: 'Just now'
+            };
+
+            state.complaints.unshift(newEntry);
+            state.frequencies[dept] = (state.frequencies[dept] || 0) + 1;
+
+            document.getElementById('complaintForm').reset();
+            document.getElementById('nlpPreviewBox').classList.add('hidden');
+
+            showToast(`Grievance ${newId} successfully registered & routed to ${dept}!`);
+            renderAll();
+            switchTab('admin');
+        }
+
+        // Resolve Ticket Action
+        function resolveTicket(id) {
+            const index = state.complaints.findIndex(c => c.id === id);
+            if (index !== -1) {
+                const item = state.complaints.splice(index, 1)[0];
+                item.resolvedBy = "Department Admin Team";
+                item.resolutionNote = "Addressed and resolved according to standard institutional SOP.";
+                item.rating = "5/5";
+                state.solved.unshift(item);
+                showToast(`Ticket ${id} marked as solved and published to trust ledger.`);
+                renderAll();
+            }
+        }
+
+        // Render All UI Components & Metrics
+        function renderAll() {
+            // Update counts
+            document.getElementById('totalCountDisplay').innerText = 240 + state.complaints.length + state.solved.length;
+            document.getElementById('liveQueueCount').innerText = `${state.complaints.length} Active Tickets`;
+            document.getElementById('statActive').innerText = state.complaints.length;
+            
+            const highCount = state.complaints.filter(c => c.urgency === 'High').length;
+            document.getElementById('statHighCount').innerText = highCount;
+
+            // Check Red Alert Trigger condition (e.g., if High urgency complaints >= 2 or category count high)
+            const redAlertBanner = document.getElementById('redAlertBanner');
+            if (highCount >= 2) {
+                redAlertBanner.classList.remove('hidden');
+                document.getElementById('redAlertMessage').innerText = `Critical threshold exceeded: ${highCount} high-priority grievances waiting for immediate response. Escalated to Executive Council.`;
+            } else {
+                redAlertBanner.classList.add('hidden');
+            }
+
+            // Find Top Issue
+            let topCat = "IT & Wi-Fi Infrastructure";
+            let maxCount = -1;
+            for (const [cat, count] of Object.entries(state.frequencies)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    topCat = cat;
+                }
+            }
+            document.getElementById('statTopIssue').innerText = topCat;
+
+            // Render Admin Table Queue
+            const tbody = document.getElementById('adminQueueTableBody');
+            tbody.innerHTML = '';
+            if (state.complaints.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">No active grievances in queue. All clear!</td></tr>`;
+            } else {
+                state.complaints.forEach(c => {
+                    const urgencyBadge = c.urgency === 'High' 
+                        ? '<span class="bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full font-bold text-xs">High</span>'
+                        : c.urgency === 'Medium'
+                        ? '<span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-semibold text-xs">Medium</span>'
+                        : '<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium text-xs">Low</span>';
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                            <td class="py-3 px-4 font-mono text-xs text-indigo-600 font-semibold">${c.id}<br><span class="text-slate-400 font-sans font-normal">${c.student}</span></td>
+                            <td class="py-3 px-4 max-w-xs truncate text-slate-700" title="${c.text}">${c.text}</td>
+                            <td class="py-3 px-4"><span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg text-xs font-medium">${c.category}</span></td>
+                            <td class="py-3 px-4">${urgencyBadge}</td>
+                            <td class="py-3 px-4 text-right">
+                                <button onclick="resolveTicket('${c.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-all shadow-2xs">Mark Solved</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Render Frequency List
+            const freqList = document.getElementById('frequencyList');
+            freqList.innerHTML = '';
+            const sortedFreqs = Object.entries(state.frequencies).sort((a,b) => b[1] - a[1]);
+            sortedFreqs.forEach(([cat, count], idx) => {
+                const isHighVol = count >= 30;
+                freqList.innerHTML += `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-slate-700 flex items-center space-x-1.5">
+                                <span>${cat}</span>
+                                ${isHighVol ? '<span class="text-red-500 font-bold" title="High volume spike">🚨</span>' : ''}
+                            </span>
+                            <span class="text-slate-900 font-bold">${count} reports</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div class="bg-indigo-600 h-full rounded-full" style="width: ${Math.min(100, (count / 50) * 100)}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render Department Load Balancer bars
+            const loadBars = document.getElementById('departmentLoadBars');
+            loadBars.innerHTML = '';
+            sortedFreqs.forEach(([cat, count]) => {
+                loadBars.innerHTML += `
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-600 truncate w-44">${cat}</span>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-24 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-indigo-500 h-full" style="width: ${Math.min(100, (count / 45) * 100)}%"></div>
+                            </div>
+                            <span class="font-bold text-slate-700">${Math.round(count * 1.5)}%</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render Public Solved Log
+            renderPublicLog();
+            document.getElementById('publicSolvedCount').innerText = `${1400 + state.solved.length}+`;
+            lucide.createIcons();
+        }
+
+        // Render Public Log Grid with Filtering
+        function renderPublicLog(searchQuery = "", deptFilter = "all") {
+            const grid = document.getElementById('publicSolvedGrid');
+            grid.innerHTML = '';
+
+            const filtered = state.solved.filter(item => {
+                const matchesSearch = item.text.toLowerCase().includes(searchQuery.toLowerCase()) || item.category.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesDept = deptFilter === 'all' || item.category === deptFilter;
+                return matchesSearch && matchesDept;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-2 py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">No resolved complaints match your search filter.</div>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                grid.innerHTML += `
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center space-x-1">
+                                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                                    <span>Verified Resolved</span>
+                                </span>
+                                <span class="text-xs text-slate-400 font-mono">${item.id}</span>
+                            </div>
+                            <p class="text-sm text-slate-800 font-medium mb-3">"${item.text}"</p>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-1 text-xs text-slate-600">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Department:</span>
+                                    <span class="font-semibold text-slate-700">${item.category}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Resolution Note:</span>
+                                    <span class="font-medium text-slate-700 text-right max-w-[200px] truncate">${item.resolutionNote}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500">
+                            <span>Resolved by <strong class="text-slate-700">${item.resolvedBy || 'Admin'}</strong></span>
+                            <span class="flex items-center space-x-1 text-amber-500 font-bold">
+                                <i data-lucide="star" class="w-3.5 h-3.5 fill-current"></i>
+                                <span>${item.rating || '5/5'}</span>
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        function filterPublicLog(query) {
+            const deptFilter = document.getElementById('publicDeptFilter').value;
+            renderPublicLog(query, deptFilter);
+        }
+
+        function dismissAlert() {
+            document.getElementById('redAlertBanner').classList.add('hidden');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = msg;
+            toast.classList.remove('translate-y-32');
+            setTimeout(() => {
+                toast.classList.add('translate-y-32');
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
